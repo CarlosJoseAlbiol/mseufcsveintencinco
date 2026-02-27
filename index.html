@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSEUF Concert Singers – Audition Rating Sheet</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HEADER
+══════════════════════════════════════ -->
+<header>
+  <div class="logo-ring">🎶</div>
+  <div>
+    <h1>MSEUF Concert Singers</h1>
+    <p>Student Audition Rating Sheet · Manuel S. Enverga University Foundation</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="switchTab('records')">📋 All Records</button>
+    <button class="btn btn-gold"    onclick="switchTab('new')">＋ New Audition</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════
+     MAIN CONTAINER
+══════════════════════════════════════ -->
+<div class="container">
+
+  <!-- Tab navigation -->
+  <div class="tabs">
+    <button class="tab active" id="tab-new"     onclick="switchTab('new')">📝 New Rating Sheet</button>
+    <button class="tab"        id="tab-records" onclick="switchTab('records')">📚 Records</button>
+  </div>
+
+  <!-- ─────────────── NEW RATING SHEET ─────────────── -->
+  <div class="tab-panel active" id="panel-new">
+
+    <!-- Student Information -->
+    <div class="card">
+      <div class="card-title">🎤 Student Information</div>
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label for="inp-name">Student Name</label>
+          <input type="text" id="inp-name" placeholder="e.g. Maria Santos">
+        </div>
+
+        <div class="form-group">
+          <label for="inp-date">Date</label>
+          <input type="date" id="inp-date">
+        </div>
+
+        <div class="form-group">
+          <label for="inp-program">Program &amp; Year Level</label>
+          <input type="text" id="inp-program" placeholder="e.g. BSED 2nd Year">
+        </div>
+
+        <div class="form-group">
+          <label for="inp-apply">Applying For</label>
+          <select id="inp-apply">
+            <option value="">Select position</option>
+            <option value="Soprano (S)">Soprano (S)</option>
+            <option value="Alto (A)">Alto (A)</option>
+            <option value="Tenor (T)">Tenor (T)</option>
+            <option value="Bass (B)">Bass (B)</option>
+          </select>
+        </div>
+
+      </div>
+    </div><!-- /card -->
+
+    <!-- Performance Rating -->
+    <div class="card">
+      <div class="card-title">⭐ Performance Rating</div>
+
+      <!-- Column headers -->
+      <div class="criteria-row header">
+        <div>Criteria</div>
+        <div class="rating-cell">Excellent</div>
+        <div class="rating-cell">Very Satisfactory</div>
+        <div class="rating-cell">Satisfactory</div>
+        <div class="rating-cell">Fair</div>
+        <div class="rating-cell">Poor</div>
+        <div class="score-display">Score</div>
+      </div>
+
+      <!-- Dynamic criteria rows injected by app.js -->
+      <div id="criteria-rows"></div>
+
+      <hr class="divider">
+
+      <!-- Total score bar -->
+      <div class="total-bar">
+        <div>
+          <div class="total-label">Total Score</div>
+          <div class="progress-wrap">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+            <span style="font-size:.75rem;color:var(--muted)" id="progress-pct">0%</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div>
+            <span class="total-score" id="total-score">0</span>
+            <span class="total-max">/100</span>
+          </div>
+          <div class="grade-badge" id="grade-badge"
+               style="background:rgba(48,54,61,.5);color:var(--muted)">—</div>
+        </div>
+      </div>
+    </div><!-- /card -->
+
+    <!-- Judge's Comment -->
+    <div class="card">
+      <div class="card-title">💬 Comment / Remarks</div>
+      <textarea id="inp-comment" placeholder="Add judge's comments or general remarks here..."></textarea>
+    </div>
+
+    <!-- Photo Upload -->
+    <div class="card">
+      <div class="card-title">📷 Photos / Attachments</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="photo-input" multiple accept="image/*"
+               onchange="handlePhotoUpload(event)">
+        <div class="upload-icon">📁</div>
+        <p>Drag &amp; drop photos here or <span>browse files</span></p>
+        <p style="font-size:.75rem;margin-top:6px">Supports JPG, PNG, GIF, WEBP</p>
+      </div>
+      <div class="photo-grid" id="photo-grid"></div>
+    </div>
+
+    <!-- Form actions -->
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="resetForm()">🔄 Clear Form</button>
+      <button class="btn btn-gold"    onclick="saveRecord()">💾 Save Record</button>
+    </div>
+
+  </div><!-- /panel-new -->
+
+  <!-- ─────────────── RECORDS LIST ─────────────── -->
+  <div class="tab-panel" id="panel-records">
+
+    <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
+      <div class="search-bar" style="flex:1;min-width:200px">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input"
+               placeholder="Search by name, program, position…"
+               oninput="renderRecords()">
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="exportAll()">⬇ Export JSON</button>
+    </div>
+
+    <div id="records-list"></div>
+
+  </div><!-- /panel-records -->
+
+</div><!-- /container -->
+
+<!-- ══════════════════════════════════════
+     DETAIL MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Record Details</div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<!-- External JavaScript -->
+<script src="app.js"></script>
+
+</body>
+</html>
