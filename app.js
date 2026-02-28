@@ -199,7 +199,7 @@ function renderSongEntries() {
         </div>
         <button class="btn btn-danger btn-sm" onclick="removeSongEntry('${s.id}')">🗑 Remove</button>
       </div>
-      <div style="font-size:.85rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+      <div style="font-size:.85rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;white-space:pre-wrap;word-break:break-word">
         ${escapeHtml(s.comment)}
       </div>
     </div>`).join("");
@@ -597,7 +597,7 @@ function openRecordDetail(id) {
             <button class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:.68rem"
                     onclick="deleteComment('${r.id}','${n.id}')">Delete</button>
           </div>
-          <div class="comment-text">${escapeHtml(n.text)}</div>
+          <div class="comment-text" style="white-space:pre-wrap;word-break:break-word">${escapeHtml(n.text)}</div>
         </div>`).join("")
     : `<p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">No notes yet.</p>`;
 
@@ -639,7 +639,7 @@ function openRecordDetail(id) {
               <div style="font-size:.95rem;font-weight:700;color:var(--gold-light)">🎵 ${escapeHtml(s.song)}</div>
               ${s.assessor ? `<div style="font-size:.74rem;color:var(--muted);white-space:nowrap">👤 ${escapeHtml(s.assessor)}</div>` : ""}
             </div>
-            <div style="font-size:.86rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:7px">${escapeHtml(s.comment)}</div>
+            <div style="font-size:.86rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:7px;white-space:pre-wrap;word-break:break-word">${escapeHtml(s.comment)}</div>
           </div>`).join("")
       }
     </div>
@@ -703,5 +703,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initDragDrop();
   document.getElementById("detail-modal").addEventListener("click", e => {
     if (e.target === document.getElementById("detail-modal")) closeModal();
+  });
+
+  // Prevent Enter key from accidentally submitting on text inputs inside song form
+  // (Enter should only work freely inside textareas)
+  ["inp-song-title", "inp-song-assessor", "inp-name", "inp-assessor", "inp-event"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("keydown", e => {
+      if (e.key === "Enter") e.preventDefault();
+    });
   });
 });
