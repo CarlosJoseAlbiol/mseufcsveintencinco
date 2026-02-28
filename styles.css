@@ -185,7 +185,7 @@ input[type=text], input[type=date], select, textarea {
 }
 input:focus, select:focus, textarea:focus { border-color: var(--gold); }
 select option { background: var(--card); }
-textarea { resize: vertical; min-height: 72px; }
+textarea { resize: vertical; min-height: 72px; line-height: 1.6; white-space: pre-wrap; }
 
 /* ── RATING TABLE ── */
 .section-label {
