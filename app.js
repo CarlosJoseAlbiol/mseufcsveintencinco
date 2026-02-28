@@ -8,34 +8,36 @@ const SUPABASE_URL = "https://brpmjziododrlsmttcss.supabase.co";
 const SUPABASE_KEY = "sb_publishable_av-lxhsq54_6MTYULxIuiw_pPtP5yuk";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ═══════════════════ CRITERIA (UPDATED) ═══════════════════
-// Each criterion has 6 rating levels: excellent, verySat, sat, fair, poor, poor4
-// Combined criteria: Quality+Tone together, Interpretation+Dynamics together, etc.
+// ═══════════════════ CRITERIA ═══════════════════
+// Original scoring restored: Excellent=30, Very Sat=24, Sat=18, Fair=12, Poor=6 or Poor=4
+// Voice & Musicality are worth 30 pts max each (combined sub-criteria)
+// Pronunciation, Timing, Stage Presence, Mastery are 10 pts max each
+// Total = 30 + 30 + 10 + 10 + 10 + 10 = 100
 const CRITERIA = [
   {
     id:        "voice",
     group:     "Voice",
     label:     "Quality & Tone",
     icon:      "🎙",
-    max:       10,
-    excellent: 10,
-    verySat:   8,
-    sat:       6,
-    fair:      5,
-    poor:      4,
-    poor4:     4   // extra "Poor" column value
+    max:       30,
+    excellent: 30,
+    verySat:   24,
+    sat:       18,
+    fair:      12,
+    poor:      6,
+    poor4:     4
   },
   {
     id:        "musicality",
     group:     "Musicality",
     label:     "Interpretation & Dynamics",
     icon:      "🎵",
-    max:       10,
-    excellent: 10,
-    verySat:   8,
-    sat:       6,
-    fair:      5,
-    poor:      4,
+    max:       30,
+    excellent: 30,
+    verySat:   24,
+    sat:       18,
+    fair:      12,
+    poor:      6,
     poor4:     4
   },
   {
@@ -47,9 +49,9 @@ const CRITERIA = [
     excellent: 10,
     verySat:   8,
     sat:       6,
-    fair:      5,
-    poor:      4,
-    poor4:     4
+    fair:      4,
+    poor:      2,
+    poor4:     1
   },
   {
     id:        "timing",
@@ -60,9 +62,9 @@ const CRITERIA = [
     excellent: 10,
     verySat:   8,
     sat:       6,
-    fair:      5,
-    poor:      4,
-    poor4:     4
+    fair:      4,
+    poor:      2,
+    poor4:     1
   },
   {
     id:        "stage",
@@ -73,9 +75,9 @@ const CRITERIA = [
     excellent: 10,
     verySat:   8,
     sat:       6,
-    fair:      5,
-    poor:      4,
-    poor4:     4
+    fair:      4,
+    poor:      2,
+    poor4:     1
   },
   {
     id:        "mastery",
@@ -86,20 +88,21 @@ const CRITERIA = [
     excellent: 10,
     verySat:   8,
     sat:       6,
-    fair:      5,
-    poor:      4,
-    poor4:     4
+    fair:      4,
+    poor:      2,
+    poor4:     1
   }
 ];
 
-// 6 rating levels (poor4 is the extra "Poor" column with value 4)
+// 6 rating levels — poor = 6 (or 2 for small criteria), poor4 = 4 (or 1)
 const LEVELS       = ["excellent", "verySat", "sat", "fair", "poor", "poor4"];
-const LEVEL_LABELS = ["Excellent", "Very Satisfactory", "Satisfactory", "Fair", "Poor", "Poor (4)"];
-const MAX_TOTAL    = 60;  // 6 criteria × 10 max each
+const LEVEL_LABELS = ["Excellent", "Very Satisfactory", "Satisfactory", "Fair", "Poor (6/2)", "Poor (4/1)"];
+const MAX_TOTAL    = 100;  // 30 + 30 + 10 + 10 + 10 + 10
 
 // ── Runtime state ──
-let records = [];
-let photos  = [];   // { id, dataUrl, name }
+let records      = [];
+let photos       = [];   // { id, dataUrl, name }
+let songComments = [];   // { id, song, assessor, comment }
 
 // ═══════════════════ HELPERS ═══════════════════
 function escapeHtml(s) {
@@ -152,6 +155,56 @@ async function loadRecords() {
   }
 }
 
+// ═══════════════════ SONG COMMENT ENTRIES (FORM) ═══════════════════
+function addSongEntry() {
+  const song     = document.getElementById("inp-song-title").value.trim();
+  const assessor = document.getElementById("inp-song-assessor").value.trim();
+  const comment  = document.getElementById("inp-song-comment").value.trim();
+
+  if (!song) { showToast("⚠ Please enter a song title", true); return; }
+  if (!comment) { showToast("⚠ Please enter a comment for this song", true); return; }
+
+  songComments.push({
+    id:       "sc" + Date.now(),
+    song,
+    assessor,
+    comment
+  });
+
+  // Clear inputs
+  document.getElementById("inp-song-title").value    = "";
+  document.getElementById("inp-song-assessor").value = "";
+  document.getElementById("inp-song-comment").value  = "";
+
+  renderSongEntries();
+  showToast("Song entry added");
+}
+
+function removeSongEntry(id) {
+  songComments = songComments.filter(s => s.id !== id);
+  renderSongEntries();
+}
+
+function renderSongEntries() {
+  const container = document.getElementById("song-entries");
+  if (!songComments.length) { container.innerHTML = ""; return; }
+
+  container.innerHTML = songComments.map((s, i) => `
+    <div style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;
+                padding:14px;margin-bottom:10px;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">
+        <div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--gold-light)">🎵 ${escapeHtml(s.song)}</div>
+          ${s.assessor ? `<div style="font-size:.74rem;color:var(--muted);margin-top:2px">👤 ${escapeHtml(s.assessor)}</div>` : ""}
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeSongEntry('${s.id}')">🗑 Remove</button>
+      </div>
+      <div style="font-size:.85rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+        ${escapeHtml(s.comment)}
+      </div>
+    </div>`).join("");
+}
+
 async function saveRecord() {
   const name = document.getElementById("inp-name").value.trim();
   if (!name) { showToast("⚠ Please enter performer/group name", true); return; }
@@ -169,19 +222,19 @@ async function saveRecord() {
   });
 
   const record = {
-    id:         "r" + Date.now(),
+    id:           "r" + Date.now(),
     name,
-    date:       document.getElementById("inp-date").value || new Date().toISOString().split("T")[0],
-    song:       document.getElementById("inp-song").value.trim(),
-    voice:      document.getElementById("inp-voice").value,
-    assessor:   document.getElementById("inp-assessor").value.trim(),
-    event:      document.getElementById("inp-event").value.trim(),
+    date:         document.getElementById("inp-date").value || new Date().toISOString().split("T")[0],
+    voice:        document.getElementById("inp-voice").value,
+    assessor:     document.getElementById("inp-assessor").value.trim(),
+    event:        document.getElementById("inp-event").value.trim(),
+    songComments: songComments.map(s => ({ ...s })),
     scores,
     total,
-    comment:    document.getElementById("inp-comment").value.trim(),
-    photos:     photos.map(p => ({ ...p })),
-    notes:      [],
-    created_at: new Date().toISOString()
+    comment:      "",   // kept for backward compat
+    photos:       photos.map(p => ({ ...p })),
+    notes:        [],
+    created_at:   new Date().toISOString()
   };
 
   try {
@@ -321,8 +374,9 @@ function initDragDrop() {
 
 // ═══════════════════ RESET FORM ═══════════════════
 function resetForm() {
-  ["inp-name","inp-song","inp-assessor","inp-event","inp-comment"].forEach(id => {
-    document.getElementById(id).value = "";
+  ["inp-name","inp-assessor","inp-event","inp-song-title","inp-song-assessor","inp-song-comment"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
   });
   document.getElementById("inp-date").value  = new Date().toISOString().split("T")[0];
   document.getElementById("inp-voice").value = "";
@@ -332,8 +386,10 @@ function resetForm() {
     const el = document.getElementById(`score-${c.id}`);
     if (el) el.textContent = "–";
   });
-  photos = [];
+  photos       = [];
+  songComments = [];
   renderPhotoGrid();
+  renderSongEntries();
   updateTotal();
 }
 
@@ -398,13 +454,14 @@ function renderRecords() {
 
   // 1. Filter
   let filtered = records.filter(r => {
+    // flatten all song titles and comments for searching
+    const songText = (r.songComments || []).map(s => `${s.song} ${s.comment} ${s.assessor}`).join(" ").toLowerCase();
     const matchQ = !query ||
       (r.name      || "").toLowerCase().includes(query) ||
-      (r.song      || "").toLowerCase().includes(query) ||
       (r.event     || "").toLowerCase().includes(query) ||
       (r.voice     || "").toLowerCase().includes(query) ||
       (r.assessor  || "").toLowerCase().includes(query) ||
-      (r.comment   || "").toLowerCase().includes(query);
+      songText.includes(query);
 
     const matchV = !voiceFilter || r.voice === voiceFilter;
     return matchQ && matchV;
@@ -473,7 +530,6 @@ function renderRecords() {
             <div class="record-name">${escapeHtml(r.name)}</div>
             <div class="record-meta">
               📅 ${r.date || "N/A"}
-              ${r.song     ? ` &nbsp;·&nbsp; 🎵 ${escapeHtml(r.song)}`    : ""}
               ${r.voice    ? ` &nbsp;·&nbsp; 🎤 ${escapeHtml(r.voice)}`   : ""}
               ${r.event    ? ` &nbsp;·&nbsp; 📌 ${escapeHtml(r.event)}`   : ""}
               ${r.assessor ? ` &nbsp;·&nbsp; 👤 ${escapeHtml(r.assessor)}`: ""}
@@ -481,15 +537,15 @@ function renderRecords() {
           </div>
           <div class="record-score">
             <div class="big">${r.total}</div>
-            <div class="sub">/${MAX_TOTAL} pts</div>
+            <div class="sub">/100 pts</div>
           </div>
         </div>
         <div class="record-tags" style="margin-top:8px">
           <span class="tag" style="background:${bg};color:${col};border-color:${col}40">${label}</span>
           ${r.voice ? `<span class="tag">🎤 ${escapeHtml(r.voice)}</span>` : ""}
-          ${r.song  ? `<span class="tag">🎵 ${escapeHtml(r.song)}</span>`  : ""}
-          ${(r.photos||[]).length > 0  ? `<span class="tag">📷 ${r.photos.length}</span>`   : ""}
-          ${r.comment                  ? `<span class="tag">💬 Comment</span>`              : ""}
+          ${(r.songComments||[]).map(s => `<span class="tag">🎵 ${escapeHtml(s.song)}</span>`).join("")}
+          ${(r.photos||[]).length > 0  ? `<span class="tag">📷 ${r.photos.length}</span>` : ""}
+          ${(r.songComments||[]).length > 0 ? `<span class="tag">💬 ${r.songComments.length} song comment${r.songComments.length > 1 ? "s" : ""}</span>` : ""}
           ${(r.notes||[]).length  > 0  ? `<span class="tag">💭 ${r.notes.length} note${r.notes.length > 1 ? "s" : ""}</span>` : ""}
         </div>
       </div>`;
@@ -553,7 +609,6 @@ function openRecordDetail(id) {
         <div style="font-size:1.2rem;font-family:'Playfair Display',serif;color:var(--text)">${escapeHtml(r.name)}</div>
         <div style="font-size:.76rem;color:var(--muted);margin-top:4px;line-height:1.7">
           📅 ${r.date || "N/A"}<br>
-          ${r.song     ? `🎵 <strong style="color:var(--text)">${escapeHtml(r.song)}</strong><br>`    : ""}
           ${r.voice    ? `🎤 ${escapeHtml(r.voice)}<br>`   : ""}
           ${r.event    ? `📌 ${escapeHtml(r.event)}<br>`   : ""}
           ${r.assessor ? `👤 ${escapeHtml(r.assessor)}`    : ""}
@@ -561,7 +616,7 @@ function openRecordDetail(id) {
       </div>
       <div style="text-align:right">
         <div style="font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--gold);line-height:1">
-          ${r.total}<span style="font-size:1rem;color:var(--muted)">/${MAX_TOTAL}</span>
+          ${r.total}<span style="font-size:1rem;color:var(--muted)">/100</span>
         </div>
         <div style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;display:inline-block;margin-top:4px">${label}</div>
       </div>
@@ -573,12 +628,21 @@ function openRecordDetail(id) {
       ${breakdownHtml}
     </div>
 
-    <!-- Comment -->
-    ${r.comment ? `
-    <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
-      <div style="font-size:.7rem;color:var(--gold);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em">General Comment</div>
-      <div style="font-size:.87rem;line-height:1.6">${escapeHtml(r.comment)}</div>
-    </div>` : ""}
+    <!-- Song Comments -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🎵 Songs &amp; Assessor Comments</div>
+      ${(r.songComments||[]).length === 0
+        ? `<p style="color:var(--muted);font-size:.83rem">No song comments recorded.</p>`
+        : (r.songComments).map(s => `
+          <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:13px;margin-bottom:9px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
+              <div style="font-size:.95rem;font-weight:700;color:var(--gold-light)">🎵 ${escapeHtml(s.song)}</div>
+              ${s.assessor ? `<div style="font-size:.74rem;color:var(--muted);white-space:nowrap">👤 ${escapeHtml(s.assessor)}</div>` : ""}
+            </div>
+            <div style="font-size:.86rem;line-height:1.6;color:var(--text);border-top:1px solid var(--border);padding-top:7px">${escapeHtml(s.comment)}</div>
+          </div>`).join("")
+      }
+    </div>
 
     <!-- Photos -->
     <div style="margin-bottom:14px">
