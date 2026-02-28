@@ -45,10 +45,6 @@
           <input type="date" id="inp-date">
         </div>
         <div class="form-group">
-          <label for="inp-song">Song Title</label>
-          <input type="text" id="inp-song" placeholder="e.g. Bayan Ko">
-        </div>
-        <div class="form-group">
           <label for="inp-voice">Voice Class</label>
           <select id="inp-voice">
             <option value="">Select voice class</option>
@@ -79,7 +75,7 @@
         <div class="rating-cell">Very Satisfactory</div>
         <div class="rating-cell">Satisfactory</div>
         <div class="rating-cell">Fair</div>
-        <div class="rating-cell">Poor</div>
+        <div class="rating-cell">Poor (6)</div>
         <div class="rating-cell">Poor (4)</div>
         <div class="score-display">Score</div>
       </div>
@@ -96,7 +92,7 @@
         <div style="display:flex;align-items:center;gap:14px">
           <div>
             <span class="total-score" id="total-score">0</span>
-            <span class="total-max">/60</span>
+            <span class="total-max">/100</span>
           </div>
           <div class="grade-badge" id="grade-badge" style="background:rgba(90,21,32,.4);color:var(--muted)">—</div>
         </div>
@@ -104,8 +100,30 @@
     </div>
 
     <div class="card">
-      <div class="card-title">💬 General Comments / Remarks</div>
-      <textarea id="inp-comment" placeholder="Add general comments, strengths, areas for improvement..."></textarea>
+      <div class="card-title">🎵 Songs &amp; Assessor Comments</div>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Add one entry per song. Each entry has a song title and the assessor's specific comment for that song.</p>
+
+      <!-- Existing song-comment entries -->
+      <div id="song-entries"></div>
+
+      <!-- Add new entry form -->
+      <div id="song-add-form" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:6px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="form-group">
+            <label for="inp-song-title">Song Title</label>
+            <input type="text" id="inp-song-title" placeholder="e.g. Bayan Ko">
+          </div>
+          <div class="form-group">
+            <label for="inp-song-assessor">Assessor Name</label>
+            <input type="text" id="inp-song-assessor" placeholder="e.g. Dr. Juan dela Cruz">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label for="inp-song-comment">Comment for this Song</label>
+          <textarea id="inp-song-comment" placeholder="Write specific comments, observations, or feedback for this song…" style="min-height:68px"></textarea>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="addSongEntry()">＋ Add Song &amp; Comment</button>
+      </div>
     </div>
 
     <div class="card">
