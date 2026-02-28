@@ -228,7 +228,7 @@ async function saveRecord() {
     voice:        document.getElementById("inp-voice").value,
     assessor:     document.getElementById("inp-assessor").value.trim(),
     event:        document.getElementById("inp-event").value.trim(),
-    songComments: songComments.map(s => ({ ...s })),
+    song_comments: songComments.map(s => ({ ...s })),
     scores,
     total,
     comment:      "",   // kept for backward compat
@@ -455,7 +455,7 @@ function renderRecords() {
   // 1. Filter
   let filtered = records.filter(r => {
     // flatten all song titles and comments for searching
-    const songText = (r.songComments || []).map(s => `${s.song} ${s.comment} ${s.assessor}`).join(" ").toLowerCase();
+    const songText = (r.song_comments || []).map(s => `${s.song} ${s.comment} ${s.assessor}`).join(" ").toLowerCase();
     const matchQ = !query ||
       (r.name      || "").toLowerCase().includes(query) ||
       (r.event     || "").toLowerCase().includes(query) ||
@@ -543,9 +543,9 @@ function renderRecords() {
         <div class="record-tags" style="margin-top:8px">
           <span class="tag" style="background:${bg};color:${col};border-color:${col}40">${label}</span>
           ${r.voice ? `<span class="tag">🎤 ${escapeHtml(r.voice)}</span>` : ""}
-          ${(r.songComments||[]).map(s => `<span class="tag">🎵 ${escapeHtml(s.song)}</span>`).join("")}
+          ${(r.song_comments||[]).map(s => `<span class="tag">🎵 ${escapeHtml(s.song)}</span>`).join("")}
           ${(r.photos||[]).length > 0  ? `<span class="tag">📷 ${r.photos.length}</span>` : ""}
-          ${(r.songComments||[]).length > 0 ? `<span class="tag">💬 ${r.songComments.length} song comment${r.songComments.length > 1 ? "s" : ""}</span>` : ""}
+          ${(r.song_comments||[]).length > 0 ? `<span class="tag">💬 ${r.song_comments.length} song comment${r.song_comments.length > 1 ? "s" : ""}</span>` : ""}
           ${(r.notes||[]).length  > 0  ? `<span class="tag">💭 ${r.notes.length} note${r.notes.length > 1 ? "s" : ""}</span>` : ""}
         </div>
       </div>`;
@@ -631,9 +631,9 @@ function openRecordDetail(id) {
     <!-- Song Comments -->
     <div style="margin-bottom:14px">
       <div style="font-size:.7rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🎵 Songs &amp; Assessor Comments</div>
-      ${(r.songComments||[]).length === 0
+      ${(r.song_comments||[]).length === 0
         ? `<p style="color:var(--muted);font-size:.83rem">No song comments recorded.</p>`
-        : (r.songComments).map(s => `
+        : (r.song_comments).map(s => `
           <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:13px;margin-bottom:9px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
               <div style="font-size:.95rem;font-weight:700;color:var(--gold-light)">🎵 ${escapeHtml(s.song)}</div>
