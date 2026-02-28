@@ -1,76 +1,141 @@
 /* ═══════════════════════════════════════════════════
-   MSEUF Concert Singers – Audition Rating Sheet
-   app.js  —  powered by Supabase (shared database)
+   MSEUF Concert Singers – Choir Assessment Sheet
+   app.js  |  Supabase shared database
 ═══════════════════════════════════════════════════ */
 
-// ── Supabase connection ──
+// ── Supabase ──
 const SUPABASE_URL = "https://brpmjziododrlsmttcss.supabase.co";
 const SUPABASE_KEY = "sb_publishable_av-lxhsq54_6MTYULxIuiw_pPtP5yuk";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ═══════════════════ CRITERIA DATA ═══════════════════
+// ═══════════════════ CRITERIA (UPDATED) ═══════════════════
+// Each criterion has 6 rating levels: excellent, verySat, sat, fair, poor, poor4
+// Combined criteria: Quality+Tone together, Interpretation+Dynamics together, etc.
 const CRITERIA = [
-  { id:"voice_quality",   group:"Voice",             label:"Quality",                     max:30, excellent:30, verySat:24, sat:18, fair:12, poor:6  },
-  { id:"voice_tone",      group:"Voice",             label:"Tone",                        max:30, excellent:30, verySat:24, sat:18, fair:12, poor:6  },
-  { id:"music_interp",    group:"Musicality",        label:"Interpretation",              max:30, excellent:30, verySat:24, sat:18, fair:12, poor:6  },
-  { id:"music_dynamics",  group:"Musicality",        label:"Dynamics",                    max:30, excellent:30, verySat:24, sat:18, fair:12, poor:6  },
-  { id:"pronunc_enunc",   group:"Pronunciation",     label:"Enunciation",                 max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"pronunc_clarity", group:"Pronunciation",     label:"Clarity",                     max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"timing_sync",     group:"Timing/Rhythm",     label:"Synchronization with music",  max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"timing_pace",     group:"Timing/Rhythm",     label:"Pace",                        max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"stage_conf",      group:"Stage Presence",    label:"Confidence",                  max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"stage_expr",      group:"Stage Presence",    label:"Expression",                  max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
-  { id:"mastery_no_err",  group:"Mastery of Lyrics", label:"No error or lapses in memory",max:10, excellent:10, verySat:8,  sat:6,  fair:4,  poor:2  },
+  {
+    id:        "voice",
+    group:     "Voice",
+    label:     "Quality & Tone",
+    icon:      "🎙",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4   // extra "Poor" column value
+  },
+  {
+    id:        "musicality",
+    group:     "Musicality",
+    label:     "Interpretation & Dynamics",
+    icon:      "🎵",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4
+  },
+  {
+    id:        "pronunciation",
+    group:     "Pronunciation",
+    label:     "Clarity & Enunciation",
+    icon:      "💬",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4
+  },
+  {
+    id:        "timing",
+    group:     "Timing / Rhythm",
+    label:     "Pace & Synchronization with Music",
+    icon:      "🥁",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4
+  },
+  {
+    id:        "stage",
+    group:     "Stage Presence",
+    label:     "Confidence & Expression",
+    icon:      "🌟",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4
+  },
+  {
+    id:        "mastery",
+    group:     "Mastery of Lyrics",
+    label:     "No error or lapses in memory",
+    icon:      "📖",
+    max:       10,
+    excellent: 10,
+    verySat:   8,
+    sat:       6,
+    fair:      5,
+    poor:      4,
+    poor4:     4
+  }
 ];
 
-const LEVELS       = ["excellent", "verySat", "sat", "fair", "poor"];
-const GROUP_ICONS  = {
-  "Voice":             "🎙",
-  "Musicality":        "🎵",
-  "Pronunciation":     "💬",
-  "Timing/Rhythm":     "🥁",
-  "Stage Presence":    "🌟",
-  "Mastery of Lyrics": "📖"
-};
+// 6 rating levels (poor4 is the extra "Poor" column with value 4)
+const LEVELS       = ["excellent", "verySat", "sat", "fair", "poor", "poor4"];
+const LEVEL_LABELS = ["Excellent", "Very Satisfactory", "Satisfactory", "Fair", "Poor", "Poor (4)"];
+const MAX_TOTAL    = 60;  // 6 criteria × 10 max each
 
-// Runtime state
-let records  = [];
-let photos   = [];   // temp photos before saving { id, dataUrl, name }
+// ── Runtime state ──
+let records = [];
+let photos  = [];   // { id, dataUrl, name }
 
 // ═══════════════════ HELPERS ═══════════════════
-function groupIcon(g) { return GROUP_ICONS[g] || "•"; }
-
 function escapeHtml(s) {
-  return String(s||"")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;");
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function getGrade(total) {
-  if (total >= 90) return { label:"Outstanding", bg:"rgba(63,185,80,.15)",   col:"#3fb950" };
-  if (total >= 75) return { label:"Very Good",   bg:"rgba(201,168,76,.15)",  col:"#c9a84c" };
-  if (total >= 60) return { label:"Good",        bg:"rgba(88,166,255,.15)",  col:"#58a6ff" };
-  if (total >= 45) return { label:"Fair",        bg:"rgba(248,81,73,.15)",   col:"#f85149" };
-  return                  { label:"Needs Work",  bg:"rgba(110,118,129,.15)", col:"#6e7681" };
+  const pct = (total / MAX_TOTAL) * 100;
+  if (pct >= 90) return { label: "Outstanding",  bg: "rgba(201,168,76,.18)",  col: "#e8c97a" };
+  if (pct >= 75) return { label: "Very Good",    bg: "rgba(184,144,128,.18)", col: "#c9a07a" };
+  if (pct >= 60) return { label: "Good",         bg: "rgba(139,26,40,.35)",   col: "#f5a0b0" };
+  if (pct >= 45) return { label: "Fair",         bg: "rgba(248,81,73,.15)",   col: "#f85149" };
+  return              { label: "Needs Work",   bg: "rgba(110,118,129,.15)", col: "#8b949e" };
 }
 
 // Toast
 let toastTimer;
 function showToast(msg, isError = false) {
   const t = document.getElementById("toast");
-  t.textContent       = msg;
-  t.style.background  = isError ? "#f85149" : "#c9a84c";
-  t.style.color       = isError ? "#fff"    : "#0d1117";
+  t.textContent      = msg;
+  t.style.background = isError
+    ? "linear-gradient(135deg,#f85149,#ff6b6b)"
+    : "linear-gradient(135deg,#c9a84c,#e8c97a)";
+  t.style.color = isError ? "#fff" : "#2d0609";
   t.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
 }
 
-// ═══════════════════ SUPABASE: LOAD RECORDS ═══════════════════
+// ═══════════════════ SUPABASE ═══════════════════
 async function loadRecords() {
   const list = document.getElementById("records-list");
-  list.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><p>Loading shared records…</p></div>`;
+  list.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><p>Loading shared assessments…</p></div>`;
 
   try {
     const { data, error } = await db
@@ -79,19 +144,17 @@ async function loadRecords() {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-
     records = data || [];
     renderRecords();
   } catch (err) {
     console.error(err);
-    list.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Failed to load records. Check your connection.</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Could not load records. Check connection.</p><p style="font-size:.75rem;margin-top:6px">${escapeHtml(err.message)}</p></div>`;
   }
 }
 
-// ═══════════════════ SUPABASE: SAVE RECORD ═══════════════════
 async function saveRecord() {
   const name = document.getElementById("inp-name").value.trim();
-  if (!name) { showToast("⚠ Please enter the student name", true); return; }
+  if (!name) { showToast("⚠ Please enter performer/group name", true); return; }
 
   const btn = document.getElementById("save-btn");
   btn.textContent = "Saving…";
@@ -109,8 +172,10 @@ async function saveRecord() {
     id:         "r" + Date.now(),
     name,
     date:       document.getElementById("inp-date").value || new Date().toISOString().split("T")[0],
-    program:    document.getElementById("inp-program").value.trim(),
-    apply_for:  document.getElementById("inp-apply").value,
+    song:       document.getElementById("inp-song").value.trim(),
+    voice:      document.getElementById("inp-voice").value,
+    assessor:   document.getElementById("inp-assessor").value.trim(),
+    event:      document.getElementById("inp-event").value.trim(),
     scores,
     total,
     comment:    document.getElementById("inp-comment").value.trim(),
@@ -122,26 +187,23 @@ async function saveRecord() {
   try {
     const { error } = await db.from("records").insert([record]);
     if (error) throw error;
-
-    showToast("✅ Record saved and shared with everyone!");
+    showToast("✅ Assessment saved and shared!");
     resetForm();
     switchTab("records");
     await loadRecords();
   } catch (err) {
     console.error(err);
-    showToast("❌ Failed to save. Try again.", true);
+    showToast("❌ Save failed: " + err.message, true);
   } finally {
-    btn.textContent = "💾 Save & Share Record";
+    btn.textContent = "💾 Save & Share Assessment";
     btn.disabled    = false;
   }
 }
 
-// ═══════════════════ SUPABASE: UPDATE RECORD ═══════════════════
 async function updateRecord(id, changes) {
   try {
     const { error } = await db.from("records").update(changes).eq("id", id);
     if (error) throw error;
-    // update local copy
     records = records.map(r => r.id === id ? { ...r, ...changes } : r);
   } catch (err) {
     console.error(err);
@@ -149,37 +211,29 @@ async function updateRecord(id, changes) {
   }
 }
 
-// ═══════════════════ SUPABASE: DELETE RECORD ═══════════════════
 async function deleteRecord(id) {
-  if (!confirm("Delete this record for ALL users permanently?")) return;
+  if (!confirm("Delete this assessment for ALL users permanently?")) return;
   try {
     const { error } = await db.from("records").delete().eq("id", id);
     if (error) throw error;
     records = records.filter(r => r.id !== id);
     closeModal();
     renderRecords();
-    showToast("Record deleted");
+    showToast("Assessment deleted");
   } catch (err) {
     console.error(err);
     showToast("❌ Delete failed.", true);
   }
 }
 
-// ═══════════════════ NOTES ═══════════════════
+// ── Notes ──
 async function addComment(recordId) {
   const inp  = document.getElementById("new-comment-" + recordId);
   const text = inp ? inp.value.trim() : "";
   if (!text) return;
-
   const r = records.find(x => x.id === recordId);
   if (!r) return;
-
-  const updatedNotes = [...(r.notes || []), {
-    id:   "n" + Date.now(),
-    text,
-    time: new Date().toISOString()
-  }];
-
+  const updatedNotes = [...(r.notes || []), { id: "n" + Date.now(), text, time: new Date().toISOString() }];
   await updateRecord(recordId, { notes: updatedNotes });
   showToast("Note added");
   openRecordDetail(recordId);
@@ -188,25 +242,22 @@ async function addComment(recordId) {
 async function deleteComment(recordId, noteId) {
   const r = records.find(x => x.id === recordId);
   if (!r) return;
-
   const updatedNotes = (r.notes || []).filter(n => n.id !== noteId);
   await updateRecord(recordId, { notes: updatedNotes });
   showToast("Note deleted");
   openRecordDetail(recordId);
 }
 
-// ═══════════════════ PHOTOS INSIDE SAVED RECORD ═══════════════════
+// ── Photos inside saved record ──
 function addPhotoToRecord(recordId, event) {
   const r = records.find(x => x.id === recordId);
   if (!r) return;
-
   Array.from(event.target.files).forEach(file => {
     const reader = new FileReader();
     reader.onload = async ev => {
       const updatedPhotos = [...(r.photos || []), {
-        id:      "p" + Date.now() + Math.random().toString(36).slice(2),
-        dataUrl: ev.target.result,
-        name:    file.name
+        id: "p" + Date.now() + Math.random().toString(36).slice(2),
+        dataUrl: ev.target.result, name: file.name
       }];
       await updateRecord(recordId, { photos: updatedPhotos });
       showToast("Photo added");
@@ -219,23 +270,18 @@ function addPhotoToRecord(recordId, event) {
 async function deletePhotoFromRecord(recordId, photoId) {
   const r = records.find(x => x.id === recordId);
   if (!r) return;
-
   const updatedPhotos = (r.photos || []).filter(p => p.id !== photoId);
   await updateRecord(recordId, { photos: updatedPhotos });
   showToast("Photo removed");
   openRecordDetail(recordId);
 }
 
-// ═══════════════════ PHOTO UPLOAD (NEW FORM) ═══════════════════
+// ═══════════════════ PHOTO UPLOAD (FORM) ═══════════════════
 function handlePhotoUpload(e) {
   Array.from(e.target.files).forEach(file => {
     const reader = new FileReader();
     reader.onload = ev => {
-      photos.push({
-        id:      "p" + Date.now() + Math.random().toString(36).slice(2),
-        dataUrl: ev.target.result,
-        name:    file.name
-      });
+      photos.push({ id: "p" + Date.now() + Math.random().toString(36).slice(2), dataUrl: ev.target.result, name: file.name });
       renderPhotoGrid();
     };
     reader.readAsDataURL(file);
@@ -248,7 +294,7 @@ function renderPhotoGrid() {
   if (!photos.length) { grid.innerHTML = ""; return; }
   grid.innerHTML = photos.map(p => `
     <div class="photo-item" id="photo-${p.id}">
-      <img src="${p.dataUrl}" alt="${p.name}">
+      <img src="${p.dataUrl}" alt="${escapeHtml(p.name)}">
       <div class="photo-overlay">
         <button class="btn btn-sm btn-danger" onclick="deletePhoto('${p.id}')">🗑</button>
       </div>
@@ -262,56 +308,49 @@ function deletePhoto(id) {
   showToast("Photo removed");
 }
 
-// Drag & drop
 function initDragDrop() {
   const zone = document.getElementById("upload-zone");
   zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drag"); });
   zone.addEventListener("dragleave", ()  => zone.classList.remove("drag"));
   zone.addEventListener("drop",      e  => {
-    e.preventDefault();
-    zone.classList.remove("drag");
-    const files   = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
-    handlePhotoUpload({ target: { files, value:"" } });
+    e.preventDefault(); zone.classList.remove("drag");
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    handlePhotoUpload({ target: { files, value: "" } });
   });
 }
 
 // ═══════════════════ RESET FORM ═══════════════════
 function resetForm() {
-  ["inp-name","inp-program","inp-comment"].forEach(id => document.getElementById(id).value = "");
-  document.getElementById("inp-date").value   = new Date().toISOString().split("T")[0];
-  document.getElementById("inp-apply").value  = "";
+  ["inp-name","inp-song","inp-assessor","inp-event","inp-comment"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("inp-date").value  = new Date().toISOString().split("T")[0];
+  document.getElementById("inp-voice").value = "";
 
   CRITERIA.forEach(c => {
     document.querySelectorAll(`input[name="${c.id}"]`).forEach(r => r.checked = false);
     const el = document.getElementById(`score-${c.id}`);
     if (el) el.textContent = "–";
   });
-
   photos = [];
   renderPhotoGrid();
   updateTotal();
 }
 
-// ═══════════════════ CRITERIA ROWS ═══════════════════
+// ═══════════════════ BUILD CRITERIA ROWS ═══════════════════
 function buildCriteriaRows() {
-  const container  = document.getElementById("criteria-rows");
-  let currentGroup = "";
-  let html         = "";
+  const container = document.getElementById("criteria-rows");
+  let html = "";
 
   CRITERIA.forEach(c => {
-    if (c.group !== currentGroup) {
-      currentGroup = c.group;
-      html += `<div class="section-label" style="margin-top:16px;margin-bottom:4px">
-                 ${groupIcon(c.group)} ${c.group}
-               </div>`;
-    }
     html += `
+      <div class="section-label">${c.icon} ${c.group}</div>
       <div class="criteria-row" id="row-${c.id}">
         <div class="criteria-name">
           ${c.label}
           <small>Max: ${c.max} pts</small>
         </div>
-        ${LEVELS.map(lvl => `
+        ${LEVELS.map((lvl, i) => `
           <div class="rating-cell">
             <div class="max">${c[lvl]}</div>
             <div class="radio-group">
@@ -329,7 +368,6 @@ function buildCriteriaRows() {
 // ═══════════════════ LIVE SCORE ═══════════════════
 function updateTotal() {
   let total = 0;
-
   CRITERIA.forEach(c => {
     const checked = document.querySelector(`input[name="${c.id}"]:checked`);
     const val     = checked ? parseInt(checked.value) : 0;
@@ -339,58 +377,125 @@ function updateTotal() {
   });
 
   document.getElementById("total-score").textContent = total;
-  const pct = Math.min(total, 100);
-  document.getElementById("progress-fill").style.width = pct + "%";
-  document.getElementById("progress-pct").textContent  = pct + "%";
+  const pct = Math.round((total / MAX_TOTAL) * 100);
+  document.getElementById("progress-fill").style.width = Math.min(pct, 100) + "%";
+  document.getElementById("progress-pct").textContent  = Math.min(pct, 100) + "%";
 
   const { label, bg, col } = getGrade(total);
-  const badge              = document.getElementById("grade-badge");
-  badge.textContent        = label;
-  badge.style.background   = bg;
-  badge.style.color        = col;
+  const badge = document.getElementById("grade-badge");
+  badge.textContent      = label;
+  badge.style.background = bg;
+  badge.style.color      = col;
 }
 
-// ═══════════════════ RENDER RECORDS LIST ═══════════════════
+// ═══════════════════ RENDER RECORDS WITH SORT/FILTER ═══════════════════
 function renderRecords() {
-  const query    = (document.getElementById("search-input").value || "").toLowerCase();
-  const list     = document.getElementById("records-list");
-  const filtered = records.filter(r =>
-    r.name.toLowerCase().includes(query) ||
-    (r.program   || "").toLowerCase().includes(query) ||
-    (r.apply_for || "").toLowerCase().includes(query)
-  );
+  const query      = (document.getElementById("search-input").value || "").toLowerCase();
+  const voiceFilter = document.getElementById("filter-voice").value;
+  const sortBy     = document.getElementById("sort-by").value;
+  const list       = document.getElementById("records-list");
+  const countEl    = document.getElementById("records-count");
 
+  // 1. Filter
+  let filtered = records.filter(r => {
+    const matchQ = !query ||
+      (r.name      || "").toLowerCase().includes(query) ||
+      (r.song      || "").toLowerCase().includes(query) ||
+      (r.event     || "").toLowerCase().includes(query) ||
+      (r.voice     || "").toLowerCase().includes(query) ||
+      (r.assessor  || "").toLowerCase().includes(query) ||
+      (r.comment   || "").toLowerCase().includes(query);
+
+    const matchV = !voiceFilter || r.voice === voiceFilter;
+    return matchQ && matchV;
+  });
+
+  // 2. Sort
+  filtered.sort((a, b) => {
+    switch (sortBy) {
+      case "date-desc":  return new Date(b.date) - new Date(a.date);
+      case "date-asc":   return new Date(a.date) - new Date(b.date);
+      case "score-desc": return b.total - a.total;
+      case "score-asc":  return a.total - b.total;
+      case "name-asc":   return (a.name||"").localeCompare(b.name||"");
+      case "voice":
+        const order = ["Soprano","Alto","Tenor","Bass","Full Choir","Mixed",""];
+        return order.indexOf(a.voice||"") - order.indexOf(b.voice||"");
+      default: return 0;
+    }
+  });
+
+  // 3. Count label
+  countEl.textContent = filtered.length
+    ? `Showing ${filtered.length} of ${records.length} assessment${records.length !== 1 ? "s" : ""}`
+    : "";
+
+  // 4. Empty state
   if (!filtered.length) {
     list.innerHTML = `
       <div class="empty-state">
         <div class="icon">📭</div>
-        <p>${query ? `No results for "${query}"` : "No records yet. Create the first one!"}</p>
+        <p>${query || voiceFilter ? "No matching assessments found." : "No assessments yet. Create the first one!"}</p>
       </div>`;
     return;
   }
 
-  list.innerHTML = filtered.map(r => {
+  // 5. Render cards — grouped by date when sorted by date
+  let html = "";
+  let lastDate = "";
+
+  filtered.forEach(r => {
     const { label, bg, col } = getGrade(r.total);
-    return `
+
+    // Date group header when sorting by date
+    if (sortBy === "date-desc" || sortBy === "date-asc") {
+      const d = r.date || "";
+      if (d !== lastDate) {
+        lastDate = d;
+        const formatted = d ? new Date(d + "T00:00:00").toLocaleDateString("en-PH", { weekday:"long", year:"numeric", month:"long", day:"numeric" }) : "No date";
+        html += `<div style="font-size:.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)">📅 ${formatted}</div>`;
+      }
+    }
+
+    // Voice group header when sorting by voice
+    if (sortBy === "voice") {
+      const v = r.voice || "Unspecified";
+      if (v !== lastDate) {
+        lastDate = v;
+        html += `<div style="font-size:.72rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)">🎤 ${v}</div>`;
+      }
+    }
+
+    html += `
       <div class="record-card" onclick="openRecordDetail('${r.id}')">
         <div class="record-header">
           <div>
             <div class="record-name">${escapeHtml(r.name)}</div>
-            <div class="record-meta">📅 ${r.date} · ${r.program||"N/A"} · ${r.apply_for||"N/A"}</div>
+            <div class="record-meta">
+              📅 ${r.date || "N/A"}
+              ${r.song     ? ` &nbsp;·&nbsp; 🎵 ${escapeHtml(r.song)}`    : ""}
+              ${r.voice    ? ` &nbsp;·&nbsp; 🎤 ${escapeHtml(r.voice)}`   : ""}
+              ${r.event    ? ` &nbsp;·&nbsp; 📌 ${escapeHtml(r.event)}`   : ""}
+              ${r.assessor ? ` &nbsp;·&nbsp; 👤 ${escapeHtml(r.assessor)}`: ""}
+            </div>
           </div>
           <div class="record-score">
             <div class="big">${r.total}</div>
-            <div class="sub">/100 pts</div>
+            <div class="sub">/${MAX_TOTAL} pts</div>
           </div>
         </div>
-        <div class="record-tags" style="margin-top:10px">
+        <div class="record-tags" style="margin-top:8px">
           <span class="tag" style="background:${bg};color:${col};border-color:${col}40">${label}</span>
-          ${(r.photos||[]).length   > 0 ? `<span class="tag">📷 ${r.photos.length} photo${r.photos.length   > 1 ? "s" : ""}</span>` : ""}
-          ${r.comment                   ? `<span class="tag">💬 Comment</span>`                                                       : ""}
-          ${(r.notes||[]).length    > 0 ? `<span class="tag">💭 ${r.notes.length} note${r.notes.length    > 1 ? "s" : ""}</span>`  : ""}
+          ${r.voice ? `<span class="tag">🎤 ${escapeHtml(r.voice)}</span>` : ""}
+          ${r.song  ? `<span class="tag">🎵 ${escapeHtml(r.song)}</span>`  : ""}
+          ${(r.photos||[]).length > 0  ? `<span class="tag">📷 ${r.photos.length}</span>`   : ""}
+          ${r.comment                  ? `<span class="tag">💬 Comment</span>`              : ""}
+          ${(r.notes||[]).length  > 0  ? `<span class="tag">💭 ${r.notes.length} note${r.notes.length > 1 ? "s" : ""}</span>` : ""}
         </div>
       </div>`;
-  }).join("");
+  });
+
+  list.innerHTML = html;
 }
 
 // ═══════════════════ RECORD DETAIL MODAL ═══════════════════
@@ -399,31 +504,21 @@ function openRecordDetail(id) {
   if (!r) return;
   const { label, bg, col } = getGrade(r.total);
 
-  // Score breakdown
-  let criteriaHtml = "";
-  let currentGroup = "";
+  // Score breakdown bars
+  let breakdownHtml = "";
   CRITERIA.forEach(c => {
-    if (c.group !== currentGroup) {
-      currentGroup = c.group;
-      criteriaHtml += `
-        <div style="font-size:.72rem;font-weight:600;color:var(--gold);text-transform:uppercase;
-                    letter-spacing:.08em;margin:12px 0 5px">
-          ${groupIcon(c.group)} ${c.group}
-        </div>`;
-    }
     const score = (r.scores || {})[c.id] || 0;
     const pct   = (score / c.max) * 100;
-    criteriaHtml += `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;font-size:.84rem">
-        <div style="width:160px;color:var(--text);flex-shrink:0">${c.label}</div>
-        <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:3px"></div>
-        </div>
-        <div style="width:48px;text-align:right;font-weight:600;color:var(--gold-light)">${score}/${c.max}</div>
+    breakdownHtml += `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:.83rem">
+        <div style="width:10px;text-align:center">${c.icon}</div>
+        <div style="width:180px;flex-shrink:0;color:var(--text)">${c.label}</div>
+        <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div style="width:44px;text-align:right;font-weight:700;color:var(--gold-light)">${score}/${c.max}</div>
       </div>`;
   });
 
-  // Photos
+  // Photos html
   const photosHtml = (r.photos||[]).length
     ? `<div class="photo-grid" style="margin-top:0">
          ${r.photos.map(p => `
@@ -435,56 +530,62 @@ function openRecordDetail(id) {
              <div class="photo-caption">${escapeHtml(p.name)}</div>
            </div>`).join("")}
        </div>`
-    : `<p style="color:var(--muted);font-size:.85rem">No photos attached.</p>`;
+    : `<p style="color:var(--muted);font-size:.83rem">No photos attached.</p>`;
 
-  // Notes
+  // Notes html
   const notesHtml = (r.notes||[]).length
-    ? (r.notes||[]).map(n => `
+    ? (r.notes).map(n => `
         <div class="comment-item">
           <div class="comment-meta">
             <span>🕐 ${new Date(n.time).toLocaleString()}</span>
-            <button class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:.7rem"
+            <button class="btn btn-sm btn-danger" style="padding:2px 8px;font-size:.68rem"
                     onclick="deleteComment('${r.id}','${n.id}')">Delete</button>
           </div>
           <div class="comment-text">${escapeHtml(n.text)}</div>
         </div>`).join("")
-    : `<p style="color:var(--muted);font-size:.85rem;margin-bottom:8px">No notes yet.</p>`;
+    : `<p style="color:var(--muted);font-size:.83rem;margin-bottom:8px">No notes yet.</p>`;
 
   const html = `
-    <div style="display:flex;justify-content:space-between;align-items:center;
-                margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <!-- Info summary -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div>
-        <div style="font-size:1.2rem;font-family:'Playfair Display',serif">${escapeHtml(r.name)}</div>
-        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">
-          📅 ${r.date} · ${r.program||"N/A"} · ${r.apply_for||"N/A"}
+        <div style="font-size:1.2rem;font-family:'Playfair Display',serif;color:var(--text)">${escapeHtml(r.name)}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:4px;line-height:1.7">
+          📅 ${r.date || "N/A"}<br>
+          ${r.song     ? `🎵 <strong style="color:var(--text)">${escapeHtml(r.song)}</strong><br>`    : ""}
+          ${r.voice    ? `🎤 ${escapeHtml(r.voice)}<br>`   : ""}
+          ${r.event    ? `📌 ${escapeHtml(r.event)}<br>`   : ""}
+          ${r.assessor ? `👤 ${escapeHtml(r.assessor)}`    : ""}
         </div>
       </div>
       <div style="text-align:right">
-        <div style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)">
-          ${r.total}<span style="font-size:1rem;color:var(--muted)">/100</span>
+        <div style="font-family:'Playfair Display',serif;font-size:2.2rem;color:var(--gold);line-height:1">
+          ${r.total}<span style="font-size:1rem;color:var(--muted)">/${MAX_TOTAL}</span>
         </div>
-        <span style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:600">${label}</span>
+        <div style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;display:inline-block;margin-top:4px">${label}</div>
       </div>
     </div>
 
-    <div style="background:var(--surface);border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid var(--border)">
-      <div style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;
-                  letter-spacing:.07em;margin-bottom:8px">Score Breakdown</div>
-      ${criteriaHtml}
+    <!-- Score breakdown -->
+    <div style="background:var(--surface);border-radius:10px;padding:14px;margin-bottom:14px;border:1px solid var(--border)">
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Score Breakdown</div>
+      ${breakdownHtml}
     </div>
 
+    <!-- Comment -->
     ${r.comment ? `
-    <div style="background:var(--surface);border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid var(--border)">
-      <div style="font-size:.72rem;color:var(--gold);font-weight:600;margin-bottom:5px">JUDGE'S COMMENT</div>
-      <div style="font-size:.88rem;line-height:1.6">${escapeHtml(r.comment)}</div>
+    <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid var(--border)">
+      <div style="font-size:.7rem;color:var(--gold);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em">General Comment</div>
+      <div style="font-size:.87rem;line-height:1.6">${escapeHtml(r.comment)}</div>
     </div>` : ""}
 
-    <div style="margin-bottom:16px">
-      <div style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;
-                  letter-spacing:.07em;margin-bottom:8px">📷 Photos</div>
-      <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-                    border:1px dashed var(--border);border-radius:8px;cursor:pointer;
-                    font-size:.8rem;color:var(--gold);margin-bottom:10px">
+    <!-- Photos -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">📷 Photos</div>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 13px;
+                    border:1px dashed var(--border2);border-radius:7px;cursor:pointer;
+                    font-size:.78rem;color:var(--gold);margin-bottom:9px">
         <input type="file" accept="image/*" multiple style="display:none"
                onchange="addPhotoToRecord('${r.id}', event)">
         ＋ Add Photo
@@ -492,20 +593,18 @@ function openRecordDetail(id) {
       ${photosHtml}
     </div>
 
-    <div style="margin-bottom:16px">
-      <div style="font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;
-                  letter-spacing:.07em;margin-bottom:8px">💭 Notes</div>
+    <!-- Notes -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">💭 Notes</div>
       ${notesHtml}
       <div style="display:flex;gap:8px;margin-top:8px">
-        <textarea id="new-comment-${r.id}" placeholder="Add a note or comment…"
-                  style="flex:1;min-height:58px"></textarea>
-        <button class="btn btn-gold" style="align-self:flex-end"
-                onclick="addComment('${r.id}')">Add</button>
+        <textarea id="new-comment-${r.id}" placeholder="Add a note or observation…" style="flex:1;min-height:55px"></textarea>
+        <button class="btn btn-gold" style="align-self:flex-end" onclick="addComment('${r.id}')">Add</button>
       </div>
     </div>
 
     <hr class="divider">
-    <div style="display:flex;justify-content:flex-end;gap:10px">
+    <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-danger" onclick="deleteRecord('${r.id}')">🗑 Delete for All</button>
     </div>
   `;
@@ -538,8 +637,6 @@ document.addEventListener("DOMContentLoaded", () => {
   buildCriteriaRows();
   document.getElementById("inp-date").value = new Date().toISOString().split("T")[0];
   initDragDrop();
-
-  // Close modal when clicking backdrop
   document.getElementById("detail-modal").addEventListener("click", e => {
     if (e.target === document.getElementById("detail-modal")) closeModal();
   });
