@@ -48,12 +48,30 @@
           <label for="inp-voice">Voice Class</label>
           <select id="inp-voice">
             <option value="">Select voice class</option>
-            <option value="Soprano">Soprano</option>
-            <option value="Alto">Alto</option>
-            <option value="Tenor">Tenor</option>
-            <option value="Bass">Bass</option>
-            <option value="Full Choir">Full Choir</option>
-            <option value="Mixed">Mixed</option>
+            <optgroup label="Soprano">
+              <option value="Soprano 1">Soprano 1</option>
+              <option value="Soprano 2">Soprano 2</option>
+              <option value="Soprano">Soprano (General)</option>
+            </optgroup>
+            <optgroup label="Alto">
+              <option value="Alto 1">Alto 1</option>
+              <option value="Alto 2">Alto 2</option>
+              <option value="Alto">Alto (General)</option>
+            </optgroup>
+            <optgroup label="Tenor">
+              <option value="Tenor 1">Tenor 1</option>
+              <option value="Tenor 2">Tenor 2</option>
+              <option value="Tenor">Tenor (General)</option>
+            </optgroup>
+            <optgroup label="Bass">
+              <option value="Bass 1">Bass 1</option>
+              <option value="Bass 2">Bass 2</option>
+              <option value="Bass">Bass (General)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="Full Choir">Full Choir</option>
+              <option value="Mixed">Mixed</option>
+            </optgroup>
           </select>
         </div>
         <div class="form-group">
@@ -154,12 +172,30 @@
       </div>
       <select id="filter-voice" onchange="renderRecords()">
         <option value="">All Voice Classes</option>
-        <option value="Soprano">Soprano</option>
-        <option value="Alto">Alto</option>
-        <option value="Tenor">Tenor</option>
-        <option value="Bass">Bass</option>
-        <option value="Full Choir">Full Choir</option>
-        <option value="Mixed">Mixed</option>
+        <optgroup label="Soprano">
+          <option value="Soprano 1">Soprano 1</option>
+          <option value="Soprano 2">Soprano 2</option>
+          <option value="Soprano">Soprano (General)</option>
+        </optgroup>
+        <optgroup label="Alto">
+          <option value="Alto 1">Alto 1</option>
+          <option value="Alto 2">Alto 2</option>
+          <option value="Alto">Alto (General)</option>
+        </optgroup>
+        <optgroup label="Tenor">
+          <option value="Tenor 1">Tenor 1</option>
+          <option value="Tenor 2">Tenor 2</option>
+          <option value="Tenor">Tenor (General)</option>
+        </optgroup>
+        <optgroup label="Bass">
+          <option value="Bass 1">Bass 1</option>
+          <option value="Bass 2">Bass 2</option>
+          <option value="Bass">Bass (General)</option>
+        </optgroup>
+        <optgroup label="Other">
+          <option value="Full Choir">Full Choir</option>
+          <option value="Mixed">Mixed</option>
+        </optgroup>
       </select>
       <select id="sort-by" onchange="renderRecords()">
         <option value="date-desc">Date (Newest)</option>
