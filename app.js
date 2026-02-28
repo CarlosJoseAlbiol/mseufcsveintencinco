@@ -476,7 +476,7 @@ function renderRecords() {
       case "score-asc":  return a.total - b.total;
       case "name-asc":   return (a.name||"").localeCompare(b.name||"");
       case "voice":
-        const order = ["Soprano","Alto","Tenor","Bass","Full Choir","Mixed",""];
+        const order = ["Soprano 1","Soprano 2","Soprano","Alto 1","Alto 2","Alto","Tenor 1","Tenor 2","Tenor","Bass 1","Bass 2","Bass","Full Choir","Mixed",""];
         return order.indexOf(a.voice||"") - order.indexOf(b.voice||"");
       default: return 0;
     }
